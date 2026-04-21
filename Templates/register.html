@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Create Account - Clockity (a nod to Unicity)</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(135deg, #1a0800 0%, #3d1000 40%, #6b2000 100%);
+            color: #f5e0d0;
+        }
+        .register-card {
+            width: 100%;
+            max-width: 420px;
+            border: 1px solid rgba(210, 100, 20, 0.35);
+            border-radius: 16px;
+            background: rgba(30, 10, 2, 0.92);
+            box-shadow: 0 24px 60px rgba(0, 0, 0, 0.65), 0 0 40px rgba(180, 70, 0, 0.15);
+        }
+        .register-logo-wrap {
+            text-align: center;
+            padding: 2rem 1rem 0.5rem;
+        }
+        .register-logo-wrap img {
+            width: 130px;
+            height: auto;
+            filter: drop-shadow(0 4px 12px rgba(200, 80, 0, 0.5));
+        }
+        .register-tagline {
+            text-align: center;
+            font-size: 0.78rem;
+            color: #c06030;
+            letter-spacing: 0.04em;
+            padding-bottom: 0.75rem;
+        }
+        .register-card .card-header {
+            background: none;
+            color: #fff;
+            border-bottom: 0;
+            border-radius: 16px 16px 0 0;
+            padding-bottom: 0;
+        }
+        .register-card .card-body {
+            padding: 1.5rem 2rem 2rem;
+        }
+        .form-label {
+            color: #e8c4a0;
+            font-size: 0.88rem;
+            font-weight: 500;
+        }
+        .form-control {
+            background: #1c0800;
+            border-color: #6b2c00;
+            color: #f5e0d0;
+            border-radius: 8px;
+        }
+        .form-control:focus {
+            background: #1c0800;
+            color: #f5e0d0;
+            border-color: #e06010;
+            box-shadow: 0 0 0 0.2rem rgba(220, 90, 10, 0.25);
+        }
+        .form-control::placeholder {
+            color: #7a4020;
+        }
+        .btn-create {
+            background: linear-gradient(135deg, #cc4400 0%, #ff8c00 100%);
+            border: none;
+            color: #fff;
+            font-weight: 600;
+            letter-spacing: 0.03em;
+            border-radius: 8px;
+            padding: 0.55rem;
+            transition: opacity 0.2s;
+        }
+        .btn-create:hover {
+            opacity: 0.88;
+            color: #fff;
+        }
+        .btn-outline-secondary {
+            border-color: #6b2c00 !important;
+            color: #c07040 !important;
+            border-radius: 8px;
+        }
+        .btn-outline-secondary:hover {
+            background: rgba(150, 60, 0, 0.2) !important;
+            color: #ffaa60 !important;
+        }
+        .back-link { color: #c07040; font-size: 0.875rem; }
+        .back-link:hover { color: #ffaa60; }
+    </style>
+</head>
+<body>
+    <div class="card register-card">
+        <div class="register-logo-wrap">
+            <img src="/static/images/clockity-logo.png" alt="Clockity Logo">
+        </div>
+        <div class="register-tagline">a nod to Unicity</div>
+        <div class="card-header text-center pt-0 pb-2" style="background:none;">
+            <h4 class="mb-0">Create Account</h4>
+        </div>
+        <div class="card-body">
+
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    {% for category, message in messages %}
+                        <div class="alert alert-{{ 'danger' if category == 'error' else category }} py-2" role="alert">
+                            {{ message }}
+                        </div>
+                    {% endfor %}
+                {% endif %}
+            {% endwith %}
+
+            <p class="text-secondary mb-3" style="font-size:0.875rem;">
+                Complete your account details below.
+            </p>
+
+            <form method="POST" action="/register">
+                <div class="mb-3">
+                    <label class="form-label">Full Name</label>
+                    <input type="text" class="form-control" name="full_name"
+                           value="{{ full_name }}" required autofocus placeholder="John Smith">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Work Email</label>
+                    <input type="email" class="form-control" name="email"
+                           value="{{ email }}" required placeholder="you@example.com">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Phone Number</label>
+                    <input type="tel" class="form-control" name="phone_number"
+                           value="{{ phone_number }}" required placeholder="(555) 555-5555">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Role</label>
+                    <select class="form-control" name="role" id="roleSelect" required>
+                        <option value="" disabled {% if not role %}selected{% endif %}>Select your role...</option>
+                        <option value="Office" {% if role == 'Office' %}selected{% endif %}>Office</option>
+                        <option value="Field" {% if role == 'Field' %}selected{% endif %}>Field</option>
+                    </select>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Password</label>
+                    <div class="input-group">
+                        <input type="password" class="form-control" name="password" id="passInput"
+                               required minlength="6">
+                        <button class="btn btn-outline-secondary" type="button"
+                                onclick="var i=document.getElementById('passInput');i.type=i.type==='password'?'text':'password';this.textContent=i.type==='password'?'👁':'🙈';">👁</button>
+                    </div>
+                    <div class="form-text text-secondary">Minimum 6 characters.</div>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Confirm Password</label>
+                    <div class="input-group">
+                        <input type="password" class="form-control" name="confirm_password" id="confirmInput" required>
+                        <button class="btn btn-outline-secondary" type="button"
+                                onclick="var i=document.getElementById('confirmInput');i.type=i.type==='password'?'text':'password';this.textContent=i.type==='password'?'👁':'🙈';">👁</button>
+                    </div>
+                </div>
+                <button class="btn btn-create w-100" type="submit">Create Account</button>
+            </form>
+
+            <div class="text-center mt-3">
+                <a href="/login" class="back-link">← Already have an account? Sign In</a>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

@@ -1,0 +1,12 @@
+__pycache__/
+*.pyc
+instance/
+*.db
+*.sqlite3
+.env
+.vscode/
+research_config.py
+
+# Keep the app database in version control so data persists after push/pull.
+!instance/
+!instance/workforce.db

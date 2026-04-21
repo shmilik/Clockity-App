@@ -1,0 +1,29 @@
+[Unit]
+Description=JobTracker Flask App
+After=network.target postgresql.service
+
+[Service]
+User=www-data
+Group=www-data
+WorkingDirectory=/var/www/jobtracker
+
+# --- Environment Variables ---
+# Replace these values before deploying
+Environment="DATABASE_URL=postgresql://jobuser:YOUR_DB_PASSWORD@localhost/jobtracker"
+Environment="FLASK_SECRET_KEY=REPLACE_WITH_A_LONG_RANDOM_STRING"
+
+# gunicorn with eventlet worker for Flask-SocketIO
+ExecStart=/var/www/jobtracker/.venv/bin/gunicorn \
+    --worker-class eventlet \
+    -w 1 \
+    --bind 127.0.0.1:5000 \
+    --timeout 120 \
+    app:app
+
+Restart=always
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target
