@@ -4,6 +4,18 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
     <title>Clockity (a nod to Unicity) - Employee & Job Management</title>
+
+    <!-- PWA -->
+    <link rel="manifest" href="/manifest.json">
+    <meta name="theme-color" content="#667eea">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Clockity">
+    <link rel="apple-touch-icon" href="/Static/Images/clockity-logo.png">
+    <meta name="application-name" content="Clockity">
+    <meta name="msapplication-TileColor" content="#667eea">
+    <meta name="msapplication-TileImage" content="/Static/Images/clockity-logo.png">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -11141,6 +11153,35 @@
         assignDateInput.addEventListener('change', checkOvertime);
         assignEmployeeSelect.addEventListener('change', checkOvertime);
     })();
+    </script>
+
+    <!-- ── PWA: Service Worker Registration ──────────────────────────────── -->
+    <script>
+    if ('serviceWorker' in navigator) {
+        window.addEventListener('load', function () {
+            navigator.serviceWorker.register('/sw.js', { scope: '/' })
+                .then(function (reg) {
+                    console.log('[SW] Registered, scope:', reg.scope);
+                    reg.addEventListener('updatefound', function () {
+                        var newWorker = reg.installing;
+                        newWorker.addEventListener('statechange', function () {
+                            if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                                // New version available — show a subtle toast
+                                var toast = document.createElement('div');
+                                toast.textContent = '🔄 Update available — refresh to get the latest version.';
+                                toast.style.cssText = 'position:fixed;bottom:1.2rem;left:50%;transform:translateX(-50%);background:#667eea;color:#fff;padding:.6rem 1.2rem;border-radius:8px;font-size:.85rem;z-index:9999;box-shadow:0 4px 12px rgba(0,0,0,.4);cursor:pointer;';
+                                toast.onclick = function () { window.location.reload(); };
+                                document.body.appendChild(toast);
+                                setTimeout(function () { toast.remove(); }, 10000);
+                            }
+                        });
+                    });
+                })
+                .catch(function (err) {
+                    console.warn('[SW] Registration failed:', err);
+                });
+        });
+    }
     </script>
 
 </body>

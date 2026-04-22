@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, redirect, url_for, flash, jsonify, session, make_response
+from flask import Flask, render_template, request, redirect, url_for, flash, jsonify, session, make_response, send_from_directory
 import math
 from flask_sqlalchemy import SQLAlchemy
 from flask_socketio import SocketIO, emit
@@ -2057,6 +2057,20 @@ def broadcast_job_update(job_id, action, job_data=None):
         }, to=None, skip_sid=None)
     except Exception as e:
         print(f"Error broadcasting update: {e}")
+
+# ── PWA support routes ────────────────────────────────────────────────────────
+@app.route('/manifest.json')
+def pwa_manifest():
+    response = make_response(send_from_directory('Static', 'manifest.json'))
+    response.headers['Content-Type'] = 'application/manifest+json'
+    return response
+
+@app.route('/sw.js')
+def pwa_service_worker():
+    response = make_response(send_from_directory('Static', 'sw.js'))
+    response.headers['Content-Type'] = 'application/javascript'
+    response.headers['Service-Worker-Allowed'] = '/'
+    return response
 
 @app.route('/')
 def index():
