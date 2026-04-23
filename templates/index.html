@@ -7904,7 +7904,8 @@
                     phoneNumber: chipEl.dataset.phoneNumber || '',
                     story: chipEl.dataset.story || '',
                     description: chipEl.dataset.description || '',
-                    startTime: chipEl.dataset.startTime || '',
+                    systemSize: chipEl.dataset.systemSize || '',
+                    startTime: chipEl.dataset.startTime || '',,
                     endTime: chipEl.dataset.endTime || '',
                     assignedDate: chipEl.dataset.assignedDate || '',
                     published: parseBool(chipEl.dataset.published),
@@ -9520,7 +9521,7 @@
                     <strong>Crew:</strong> <span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:${props.crewColor};margin-right:6px;vertical-align:middle;"></span>${props.crewName}${props.crewLead ? ' (' + props.crewLead + ')' : ''}<br>
                     <strong>Electrician:</strong> ${props.electrician || 'N/A'}<br>
                     <strong>Crew Members:</strong> ${(props.crewMembers || []).join(', ')}<br>
-                    <strong>Job Type:</strong> ${props.jobType}<br>
+                    <strong>Job Type:</strong> ${props.jobType}${props.systemSize ? ' &nbsp;<strong>System Size:</strong> ' + props.systemSize + ' kW' : ''}<br>
                     <strong>Status:</strong> ${props.status.replace(/_/g, ' ').toUpperCase()}<br>
                     <strong>PO Number:</strong> ${props.poNumber}<br>
                     <strong>Address:</strong> ${props.address}<br>
