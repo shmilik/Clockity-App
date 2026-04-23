@@ -1112,7 +1112,7 @@ def _build_payroll_data(week_start):
         bucket = emp_map.get(assign.employee_id)
         if not bucket:
             continue
-        dk = (assign.employee_id, assign.job.id, day_key)
+        dk = (assign.employee_id, assign.job.id)  # deduplicate per job, not per day
         if dk in seen_kw:
             continue
         seen_kw.add(dk)
