@@ -3425,15 +3425,20 @@ def add_job():
     permit_number = (request.form.get('permit_number') or '').strip()
 
     if len(description) > 1000:
+        if is_ajax_request():
+            return jsonify({'ok': False, 'message': 'Job details cannot exceed 1000 characters.'}), 400
         flash('Job details cannot exceed 1000 characters.', 'danger')
         return redirect(url_for('index'))
 
-
     if job_type == 'Install' and not system_size:
+        if is_ajax_request():
+            return jsonify({'ok': False, 'message': 'System size is required for Install jobs.'}), 400
         flash('System size is required for Install jobs.', 'danger')
         return redirect(url_for('index'))
 
     if job_type == 'Inspection' and not permit_number:
+        if is_ajax_request():
+            return jsonify({'ok': False, 'message': 'Permit Number is required for Inspection jobs.'}), 400
         flash('Permit Number is required for Inspection jobs.', 'danger')
         return redirect(url_for('index'))
 
