@@ -3480,12 +3480,6 @@ def add_job():
     if job_type == 'Custom Shift' or job_name:
         ps = get_effective_permission_set()
         _emp = get_effective_employee()
-        _roles = {(r or '').strip().lower() for r in (_emp.category or '').split(',') if (r or '').strip()} if _emp else set()
-        auto_publish = bool(
-            effective_is_dev_session() or
-            (_roles & {'manager', 'admin', 'management'}) or
-            (ps and (ps.can_manage_jobs or ps.can_manage_permissions))
-        )
         new_job = Job(
             job_name=job_name or 'Custom Shift',
             job_type=job_type,
@@ -3498,7 +3492,7 @@ def add_job():
             permit_number=permit_number or None,
             scheduled_date=scheduled_date,
             pending_date=pending_date,
-            published=auto_publish
+            published=False
         )
         db.session.add(new_job)
         db.session.commit()
@@ -3774,63 +3768,6 @@ def reopen_job(id):
     return redirect(url_for('index'))
 
 # ---------------------------------------------------------------------------
-# SMS helpers
-# ---------------------------------------------------------------------------
-def _format_e164(phone):
-    """Convert any US phone string to E.164 (+1XXXXXXXXXX), or return None."""
-    digits = re.sub(r'\D', '', phone or '')
-    if len(digits) == 10:
-        return '+1' + digits
-    if len(digits) == 11 and digits.startswith('1'):
-        return '+' + digits
-    return None
-
-
-def send_job_sms(job, employee, assignments):
-    """Send an SMS to an employee notifying them of a newly published job."""
-    sid   = os.environ.get('TWILIO_ACCOUNT_SID')
-    token = os.environ.get('TWILIO_AUTH_TOKEN')
-    from_ = os.environ.get('TWILIO_FROM_NUMBER')
-    if not (sid and token and from_):
-        return  # Twilio not configured — silently skip
-
-    to = _format_e164(employee.phone_number)
-    if not to:
-        return  # No valid phone number
-
-    # Build schedule lines
-    slot_lines = []
-    for a in sorted(assignments, key=lambda x: (x.assigned_date, x.start_time or datetime.min.time())):
-        date_str = a.assigned_date.strftime('%a, %b %-d')
-        if a.start_time and a.end_time:
-            time_str = f"{a.start_time.strftime('%I:%M %p').lstrip('0')} – {a.end_time.strftime('%I:%M %p').lstrip('0')}"
-        elif a.start_time:
-            time_str = a.start_time.strftime('%I:%M %p').lstrip('0')
-        else:
-            time_str = 'TBD'
-        slot_lines.append(f"  {date_str} @ {time_str}")
-    schedule = '\n'.join(slot_lines) if slot_lines else '  TBD'
-
-    lines = [f"Hi {employee.name}! You have a new job on Clockity:"]
-    lines.append(f"Job: {job.job_name}")
-    if job.job_type:
-        lines.append(f"Type: {job.job_type}")
-    if job.address:
-        lines.append(f"Address: {job.address}")
-    lines.append(f"Schedule:\n{schedule}")
-    if job.description:
-        lines.append(f"Notes: {job.description}")
-    body = '\n'.join(lines)
-
-    try:
-        from twilio.rest import Client
-        client = Client(sid, token)
-        client.messages.create(body=body, from_=from_, to=to)
-        app.logger.info(f'SMS sent to {employee.name} ({to}) for job {job.id}')
-    except Exception as e:
-        app.logger.warning(f'SMS failed for {employee.name}: {e}')
-
-
 @app.route('/job/<int:id>/publish')
 def publish_job(id):
     job = Job.query.get(id)
@@ -3844,14 +3781,6 @@ def publish_job(id):
         job.published = True
         db.session.commit()
         broadcast_job_update(job.id, 'published', {'published': True})
-        # Send SMS to each assigned employee
-        emp_assigns_map = {}
-        for a in Assignment.query.filter_by(job_id=job.id).all():
-            emp_assigns_map.setdefault(a.employee_id, []).append(a)
-        for emp_id, emp_assigns in emp_assigns_map.items():
-            emp = Employee.query.get(emp_id)
-            if emp and emp.phone_number:
-                send_job_sms(job, emp, emp_assigns)
         if expanded_crews:
             crew_list = ', '.join(sorted(set(expanded_crews)))
             flash(f'Job "{job.job_name}" published and expanded to full crew assignment for {crew_list}.', 'success')
