@@ -6991,7 +6991,7 @@
             tab.show();
         }
 
-        // Restore scroll position after a dashboard action reload
+        // Restore scroll position after any in-page action reload
         (function() {
             const savedY = sessionStorage.getItem('dashActionScrollY');
             if (savedY !== null) {
@@ -6999,6 +6999,12 @@
                 window.scrollTo(0, parseInt(savedY, 10));
             }
         })();
+
+        // Use reloadPage() instead of window.location.reload() to preserve scroll position
+        function reloadPage() {
+            try { sessionStorage.setItem('dashActionScrollY', window.scrollY); } catch(e) {}
+            window.location.reload();
+        }
 
         function setupDashboardJobActions() {
             // Intercept dashboard card action links (Publish, Unpublish, Start, Complete, Cancel, Delete)
@@ -7738,7 +7744,7 @@
                 .then(function(r) { return r.json(); })
                 .then(function(data) {
                     if (data.success) {
-                        window.location.reload();
+                        reloadPage();
                     } else {
                         alert(data.message || 'Unable to assign job.');
                     }
@@ -7788,7 +7794,7 @@
                     .then(function(r) { return r.json(); })
                     .then(function(data) {
                         if (data.success) {
-                            window.location.reload();
+                            reloadPage();
                         } else {
                             alert(data.message || 'Unable to move job to tentative list.');
                         }
@@ -8265,7 +8271,7 @@
                     if (calendar) {
                         calendar.refetchEvents();
                     }
-                    window.location.reload();
+                    reloadPage();
                 } else {
                     alert(data.message || 'Unable to move job back to pending.');
                 }
@@ -8379,7 +8385,7 @@
                         if (calendar) {
                             calendar.refetchEvents();
                         }
-                        window.location.reload();
+                        reloadPage();
                     })
                     .catch(() => {
                         info.event.remove();
@@ -8741,15 +8747,15 @@
                                             chip.innerHTML = '<span>' + (res.job_name || 'New Job') + '</span><small class="d-block text-light-emphasis">' + (res.job_type || '') + '</small>';
                                             zone.appendChild(chip);
                                             // Reload after a brief moment so the chip gets full server data and drag bindings
-                                            setTimeout(function() { window.location.reload(); }, 600);
+                                            setTimeout(reloadPage, 600);
                                         } else {
                                             // Assign failed — reload to show correct state
-                                            window.location.reload();
+                                            reloadPage();
                                         }
                                     })
-                                    .catch(function() { window.location.reload(); });
+                                    .catch(reloadPage);
                                 } else {
-                                    window.location.reload();
+                                    reloadPage();
                                 }
                             }
 
@@ -9135,7 +9141,7 @@
                     .then(response => response.json())
                     .then(data => {
                         if (data.success) {
-                            window.location.reload();
+                            reloadPage();
                         } else {
                             alert(data.message || 'Unable to move crew job.');
                         }
@@ -9453,7 +9459,7 @@
                         if (event && event.extendedProps) {
                             event.extendedProps.published = nowPublished;
                         }
-                        window.location.reload();
+                        reloadPage();
                     })
                     .catch(function() {
                         alert(`Unable to ${targetAction} job.`);
@@ -9489,7 +9495,7 @@
                             alert(data.message || 'Unable to remove assignment.');
                             return;
                         }
-                        window.location.reload();
+                        reloadPage();
                     })
                     .catch(function() {
                         alert('Unable to remove assignment.');
@@ -10884,7 +10890,7 @@
                     var dc = document.getElementById('torDayCount');
                     if (dc) dc.textContent = '';
                     showToast(data.message, 'success');
-                    setTimeout(function() { window.location.reload(); }, 800);
+                    setTimeout(reloadPage, 800);
                 });
             });
         }
@@ -10902,7 +10908,7 @@
                         return;
                     }
                     showToast('Request cancelled.', 'success');
-                    setTimeout(function() { window.location.reload(); }, 600);
+                    setTimeout(reloadPage, 600);
                 });
             });
         });
