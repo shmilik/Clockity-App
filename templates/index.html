@@ -6229,7 +6229,7 @@
                     <h5 class="modal-title">Add Job</h5>
                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                 </div>
-                <form id="quickAddJobForm" action="/job/add" method="POST">
+                <form id="quickAddJobForm" action="/job/add" method="POST" novalidate>
                     <div class="modal-body">
                         <div class="mb-3">
                             <label class="form-label">Job Type</label>
@@ -6308,7 +6308,7 @@
                     <h5 class="modal-title">📅 Add Job for <span id="calSlotDateDisplay"></span></h5>
                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                 </div>
-                <form id="calSlotAddJobForm" action="/job/add" method="POST">
+                <form id="calSlotAddJobForm" action="/job/add" method="POST" novalidate>
                     <input type="hidden" name="scheduled_date" id="calSlotScheduledDate">
                     <div class="modal-body">
                         <div id="calSlotAddJobFeedback"></div>
@@ -7235,8 +7235,10 @@
 
                 const poInput = form.querySelector('[name="po_number"]');
                 const phoneInput = form.querySelector('[name="phone_number"]');
-                if (poInput)   poInput.required   = isStandardRequired;
+                const addrInput = form.querySelector('[name="address"]');
+                if (poInput)    poInput.required    = isStandardRequired;
                 if (phoneInput) phoneInput.required = isStandardRequired;
+                if (addrInput)  addrInput.required  = isStandardRequired;
             }
 
             jobTypeSelect.removeEventListener('change', jobTypeSelect._quickHandler);
@@ -8704,8 +8706,10 @@
 
                 const poInput = document.getElementById('calSlotPoNumber');
                 const phoneInput = document.getElementById('calSlotPhone');
+                const addrInput = document.getElementById('calSlotAddress');
                 if (poInput)    poInput.required    = isStandardRequired;
                 if (phoneInput) phoneInput.required = isStandardRequired;
+                if (addrInput)  addrInput.required  = isStandardRequired;
 
                 if (permitField) {
                     permitField.style.display = isInspection ? 'block' : 'none';
@@ -8729,6 +8733,14 @@
                     const feedback = document.getElementById(feedbackId);
                     const submitBtn = document.getElementById(submitBtnId);
                     if (feedback) { feedback.innerHTML = ''; }
+
+                    // Basic JS validation — job name is always required
+                    const jobNameField = form.querySelector('[name="job_name"]');
+                    if (jobNameField && !jobNameField.value.trim()) {
+                        if (feedback) feedback.innerHTML = '<div class="alert alert-danger mb-2">Job name is required.</div>';
+                        return;
+                    }
+
                     if (submitBtn) { submitBtn.disabled = true; submitBtn.textContent = 'Saving…'; }
 
                     const data = new FormData(form);
