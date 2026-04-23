@@ -511,6 +511,14 @@ def ensure_schema_updates():
         connection.execute(text("UPDATE feedback_report SET status = 'open' WHERE (status IS NULL OR status = '') AND (resolved = false OR resolved IS NULL)"))
         connection.execute(text("UPDATE feedback_report SET closed_at = resolved_at WHERE closed_at IS NULL AND resolved_at IS NOT NULL"))
 
+        # Widen phone_number columns that were originally VARCHAR(20)
+        for tbl in ('job', 'employee', 'timesheet', 'job_deletion_log'):
+            if tbl in inspector.get_table_names():
+                try:
+                    connection.execute(text(f'ALTER TABLE {tbl} ALTER COLUMN phone_number TYPE VARCHAR(50)'))
+                except Exception:
+                    pass  # already wide enough or column doesn't exist
+
 class Department(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(100), nullable=False, unique=True)
@@ -568,7 +576,7 @@ class Job(db.Model):
     published = db.Column(db.Boolean, default=False)  # False = draft, True = published
     po_number = db.Column(db.String(100))
     address = db.Column(db.String(255))
-    phone_number = db.Column(db.String(20))
+    phone_number = db.Column(db.String(50))
     story = db.Column(db.String(255))
     description = db.Column(db.String(1000))
     system_size = db.Column(db.String(100))
