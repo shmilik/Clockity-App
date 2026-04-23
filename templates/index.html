@@ -6952,6 +6952,18 @@
             });
         }
 
+        // Read saved scroll position before any async code clears it.
+        // _scrollRestoreY is used by setupTabPersistence AND the window.load fallback.
+        var _scrollRestoreY = null;
+        (function() {
+            if ('scrollRestoration' in history) history.scrollRestoration = 'manual';
+            var v = sessionStorage.getItem('dashActionScrollY');
+            if (v !== null) {
+                sessionStorage.removeItem('dashActionScrollY');
+                _scrollRestoreY = parseInt(v, 10);
+            }
+        })();
+
         function setupTabPersistence() {
             const storageKey = 'jobtracker.activeTab';
             const tabButtons = document.querySelectorAll('#mainTabs [data-bs-toggle="tab"]');
@@ -6987,28 +6999,32 @@
                 localStorage.setItem(storageKey, savedTarget);
             }
 
-            const savedScrollY = sessionStorage.getItem('dashActionScrollY');
-            if (savedScrollY !== null) {
-                sessionStorage.removeItem('dashActionScrollY');
-                savedButton.addEventListener('shown.bs.tab', function() {
-                    window.scrollTo({ top: parseInt(savedScrollY, 10), behavior: 'instant' });
-                }, { once: true });
+            if (_scrollRestoreY !== null) {
+                var _targetY = _scrollRestoreY;
+                if (savedButton.classList.contains('active')) {
+                    // Tab is already active in HTML (server-rendered); Bootstrap's tab.show()
+                    // returns early without firing shown.bs.tab. Scroll after setup finishes
+                    // (including calendar.render() which runs after this function).
+                    setTimeout(function() { window.scrollTo({ top: _targetY, behavior: 'instant' }); }, 150);
+                    setTimeout(function() { window.scrollTo({ top: _targetY, behavior: 'instant' }); }, 600);
+                } else {
+                    savedButton.addEventListener('shown.bs.tab', function() {
+                        window.scrollTo({ top: _targetY, behavior: 'instant' });
+                        setTimeout(function() { window.scrollTo({ top: _targetY, behavior: 'instant' }); }, 300);
+                    }, { once: true });
+                }
             }
 
             const tab = new bootstrap.Tab(savedButton);
             tab.show();
         }
 
-        // Restore scroll — fallback for when the active tab was already shown (no event fires)
+        // Fallback: window.load fires after all resources — catches any edge case
+        // where the tab transition completed but layout shifts moved the page after.
         window.addEventListener('load', function() {
-            const savedY = sessionStorage.getItem('dashActionScrollY');
-            if (savedY === null) return;
-            sessionStorage.removeItem('dashActionScrollY');
-            requestAnimationFrame(function() {
-                setTimeout(function() {
-                    window.scrollTo({ top: parseInt(savedY, 10), behavior: 'instant' });
-                }, 200);
-            });
+            if (_scrollRestoreY === null) return;
+            var _y = _scrollRestoreY;
+            setTimeout(function() { window.scrollTo({ top: _y, behavior: 'instant' }); }, 200);
         });
 
         // Use reloadPage() instead of window.location.reload() to preserve scroll position
