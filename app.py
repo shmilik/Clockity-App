@@ -1099,7 +1099,8 @@ def _build_payroll_data(week_start):
             bucket['daily_service_hours'][day_key] = round(bucket['daily_service_hours'][day_key] + h, 2)
             bucket['total_service_hours']          = round(bucket['total_service_hours'] + h, 2)
 
-    seen_kw = set()
+    seen_kw = set()       # tracks (employee_id, dedup_key) — prevents double-counting per employee
+    seen_kw_po = set()    # tracks po_number globally — prevents double-counting across employees for same PO
     for assign in week_assigns:
         if not assign.job or not assign.assigned_date:
             continue
@@ -1112,7 +1113,15 @@ def _build_payroll_data(week_start):
         bucket = emp_map.get(assign.employee_id)
         if not bucket:
             continue
-        dk = (assign.employee_id, assign.job.id)  # deduplicate per job, not per day
+        po = (assign.job.po_number or '').strip()
+        # If this job has a PO, use the PO as the global dedup key so the same
+        # job (even if entered as separate records) only contributes kW once.
+        if po:
+            if po in seen_kw_po:
+                continue
+            seen_kw_po.add(po)
+        # Also deduplicate per employee per job to avoid double-counting multi-day spans
+        dk = (assign.employee_id, assign.job.id)
         if dk in seen_kw:
             continue
         seen_kw.add(dk)
