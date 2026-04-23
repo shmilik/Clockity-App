@@ -3485,22 +3485,32 @@ def add_job():
     if job_type == 'Custom Shift' or job_name:
         ps = get_effective_permission_set()
         _emp = get_effective_employee()
-        new_job = Job(
-            job_name=job_name or 'Custom Shift',
-            job_type=job_type,
-            po_number=po_number,
-            address=address,
-            phone_number=phone_number,
-            story=story,
-            description=description,
-            system_size=system_size or None,
-            permit_number=permit_number or None,
-            scheduled_date=scheduled_date,
-            pending_date=pending_date,
-            published=False
-        )
-        db.session.add(new_job)
-        db.session.commit()
+        try:
+            new_job = Job(
+                job_name=job_name or 'Custom Shift',
+                job_type=job_type,
+                po_number=po_number,
+                address=address,
+                phone_number=phone_number,
+                story=story,
+                description=description,
+                system_size=system_size or None,
+                permit_number=permit_number or None,
+                scheduled_date=scheduled_date,
+                pending_date=pending_date,
+                published=False
+            )
+            db.session.add(new_job)
+            db.session.commit()
+        except Exception as e:
+            db.session.rollback()
+            import traceback
+            err_detail = traceback.format_exc()
+            app.logger.error(f'add_job DB error: {err_detail}')
+            if is_ajax_request():
+                return jsonify({'ok': False, 'message': f'Database error: {str(e)}'}), 500
+            flash('Failed to save job. Please try again.', 'danger')
+            return redirect(url_for('index'))
         if is_ajax_request():
             return jsonify({
                 'ok': True,
