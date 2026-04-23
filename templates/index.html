@@ -6312,7 +6312,6 @@
                     <input type="hidden" name="scheduled_date" id="calSlotScheduledDate">
                     <div class="modal-body">
                         <div id="calSlotAddJobFeedback"></div>
-                        <div id="calSlotAddJobFeedback"></div>
                         <div class="mb-3">
                             <label class="form-label">Job Type</label>
                             <select name="job_type" id="calSlotJobType" class="form-select" required>
@@ -6367,7 +6366,7 @@
                     </div>
                     <div class="modal-footer">
                         <button type="button" class="btn btn-danger" data-bs-dismiss="modal">Discard</button>
-                        <button type="submit" class="btn btn-success" id="calSlotAddJobSubmitBtn">Save</button>
+                        <button type="button" class="btn btn-success" id="calSlotAddJobSubmitBtn" onclick="submitCalSlotForm()">Save</button>
                     </div>
                 </form>
             </div>
@@ -8848,6 +8847,103 @@
             wireAddJobForm('calSlotAddJobForm', 'calSlotAddJobFeedback', 'calSlotAddJobSubmitBtn', 'calendarSlotAddJobModal');
         })();
         // ── end AJAX add job ──────────────────────────────────────────────────
+
+        // Direct save handler for the calendar-slot modal Save button (onclick).
+        // Bypasses form submit event entirely to avoid any browser/Bootstrap interception.
+        function submitCalSlotForm() {
+            var form = document.getElementById('calSlotAddJobForm');
+            var feedback = document.getElementById('calSlotAddJobFeedback');
+            var submitBtn = document.getElementById('calSlotAddJobSubmitBtn');
+            var modalEl = document.getElementById('calendarSlotAddJobModal');
+
+            if (feedback) feedback.innerHTML = '';
+
+            var jobNameField = form ? form.querySelector('[name="job_name"]') : null;
+            if (!jobNameField || !jobNameField.value.trim()) {
+                if (feedback) feedback.innerHTML = '<div class="alert alert-danger mb-2">Job name is required.</div>';
+                return;
+            }
+
+            if (submitBtn) { submitBtn.disabled = true; submitBtn.textContent = 'Saving\u2026'; }
+
+            var data = new FormData(form);
+            fetch('/job/add', {
+                method: 'POST',
+                headers: { 'X-Requested-With': 'XMLHttpRequest' },
+                body: data
+            })
+            .then(function(r) {
+                if (!r.ok && r.status !== 400) {
+                    return r.text().then(function(txt) {
+                        throw new Error('Server error ' + r.status + ': ' + txt.substring(0, 200));
+                    });
+                }
+                return r.json();
+            })
+            .then(function(res) {
+                if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = 'Save'; }
+                if (res.ok) {
+                    var bsModal = bootstrap.Modal.getInstance(modalEl);
+                    if (bsModal) bsModal.hide();
+                    if (form) form.reset();
+                    if (typeof calendar !== 'undefined' && calendar) {
+                        try { calendar.refetchEvents(); } catch(e) {}
+                    }
+                    var empId = modalEl ? modalEl.dataset.targetEmployeeId : '';
+                    var targetDate = modalEl ? modalEl.dataset.targetDate : '';
+                    var zone = modalEl ? modalEl._sourceZone : null;
+                    if (empId && targetDate && res.job_id) {
+                        fetch('/api/grid-assign', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                job_id: res.job_id,
+                                employee_id: parseInt(empId, 10),
+                                target_date: targetDate,
+                                source_assignment_id: null,
+                                copy_mode: false
+                            })
+                        })
+                        .then(function(r2) { return r2.json(); })
+                        .then(function(assignRes) {
+                            if (assignRes.success && zone) {
+                                var hint = zone.querySelector('.drop-hint');
+                                if (hint) hint.remove();
+                                var chip = document.createElement('div');
+                                chip.className = 'employee-job-chip grid-draggable unpublished';
+                                chip.style.cssText = '--job-chip-color:#23345c;';
+                                chip.draggable = true;
+                                chip.dataset.jobId = String(res.job_id);
+                                chip.dataset.jobName = res.job_name || '';
+                                chip.dataset.published = 'false';
+                                chip.dataset.status = 'not_started';
+                                chip.dataset.assignedDate = targetDate;
+                                chip.innerHTML = '<span>' + (res.job_name || 'New Job') + '</span><small class="d-block text-light-emphasis">' + (res.job_type || '') + '</small>';
+                                zone.appendChild(chip);
+                                setTimeout(reloadPage, 600);
+                            } else {
+                                reloadPage();
+                            }
+                        })
+                        .catch(reloadPage);
+                    } else {
+                        reloadPage();
+                    }
+                    var toast = document.createElement('div');
+                    toast.className = 'alert alert-success position-fixed bottom-0 end-0 m-3 shadow';
+                    toast.style.cssText = 'z-index:9999;min-width:280px;';
+                    toast.textContent = res.message || 'Job added successfully';
+                    document.body.appendChild(toast);
+                    setTimeout(function() { if (toast.parentNode) toast.parentNode.removeChild(toast); }, 3500);
+                } else {
+                    if (feedback) feedback.innerHTML = '<div class="alert alert-danger mb-2">' + (res.message || 'Failed to save job.') + '</div>';
+                }
+            })
+            .catch(function(err) {
+                if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = 'Save'; }
+                if (feedback) feedback.innerHTML = '<div class="alert alert-danger mb-2">Error: ' + (err.message || 'Something went wrong. Please try again.') + '</div>';
+            });
+        }
 
         function openScheduleModalForJob(jobId, jobName, dateStr = '') {
             const modalDate = document.getElementById('modalDate');
