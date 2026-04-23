@@ -438,7 +438,8 @@ def ensure_schema_updates():
             'first_login': "ALTER TABLE employee ADD COLUMN first_login BOOLEAN DEFAULT 1"
         },
         'assignment': {
-            'crew_id': "ALTER TABLE assignment ADD COLUMN crew_id INTEGER"
+            'crew_id': "ALTER TABLE assignment ADD COLUMN crew_id INTEGER",
+            'day_pay': "ALTER TABLE assignment ADD COLUMN day_pay BOOLEAN DEFAULT FALSE"
         },
         'job': {
             'created_at': "ALTER TABLE job ADD COLUMN created_at DATETIME",
@@ -596,6 +597,7 @@ class Assignment(db.Model):
     assigned_date = db.Column(db.Date, nullable=False)
     start_time = db.Column(db.Time)
     end_time = db.Column(db.Time)
+    day_pay = db.Column(db.Boolean, default=False)
     crew = db.relationship('Group', foreign_keys=[crew_id])
 
 class Timesheet(db.Model):
@@ -1073,12 +1075,14 @@ def _build_payroll_data(week_start):
             'role_order':  _role_order(emp),
             'daily_hours': {d['key']: 0.0 for d in days},
             'daily_kw':    {d['key']: 0.0 for d in days},
+            'daily_day_pay':   {d['key']: 0 for d in days},
             'daily_service_hours': {d['key']: 0.0 for d in days},
             'daily_adj_hours': {d['key']: 0.0 for d in days},
             'daily_adj_kw':    {d['key']: 0.0 for d in days},
             'total_hours': 0.0,
             'total_service_hours': 0.0,
             'total_kw':    0.0,
+            'total_day_pay_days': 0,
         }
         for emp in all_emps
     }
@@ -1100,29 +1104,39 @@ def _build_payroll_data(week_start):
             bucket['total_service_hours']          = round(bucket['total_service_hours'] + h, 2)
 
     seen_kw = set()
+    seen_day_pay = set()
     for assign in week_assigns:
         if not assign.job or not assign.assigned_date:
             continue
         if 'install' not in (assign.job.job_type or '').strip().lower():
             continue
-        kw = parse_kw_value(assign.job.system_size)
-        if kw <= 0:
-            continue
         day_key = assign.assigned_date.isoformat()
         bucket = emp_map.get(assign.employee_id)
         if not bucket:
             continue
-        # Dedup per employee: use PO number as job identity when available so a job
-        # that spans multiple days (or is entered as duplicate records with the same PO)
-        # only counts kW once per crew member. Each crew member still gets their own count.
         po = (assign.job.po_number or '').strip()
         job_key = po if po else str(assign.job.id)
-        dk = (assign.employee_id, job_key)
-        if dk in seen_kw:
-            continue
-        seen_kw.add(dk)
-        bucket['daily_kw'][day_key] = round(bucket['daily_kw'][day_key] + kw, 2)
-        bucket['total_kw']          = round(bucket['total_kw'] + kw, 2)
+
+        if assign.day_pay:
+            # Day Pay: count once per employee per job per day
+            dp_key = (assign.employee_id, job_key, day_key)
+            if dp_key in seen_day_pay:
+                continue
+            seen_day_pay.add(dp_key)
+            if day_key in bucket['daily_day_pay']:
+                bucket['daily_day_pay'][day_key] += 1
+                bucket['total_day_pay_days'] += 1
+        else:
+            kw = parse_kw_value(assign.job.system_size)
+            if kw <= 0:
+                continue
+            # Dedup per employee: use PO number as job identity when available
+            dk = (assign.employee_id, job_key)
+            if dk in seen_kw:
+                continue
+            seen_kw.add(dk)
+            bucket['daily_kw'][day_key] = round(bucket['daily_kw'][day_key] + kw, 2)
+            bucket['total_kw']          = round(bucket['total_kw'] + kw, 2)
 
     # Apply manual adjustments
     week_adjs = PayrollAdjustment.query.filter(
@@ -2454,6 +2468,7 @@ def index():
             'story': assign.job.story or '',
             'description': assign.job.description or '',
             'system_size': assign.job.system_size or '',
+            'day_pay': bool(assign.day_pay),
             'crew_id': crew.id if crew else '',
             'crew_name': crew_name,
             'crew_color': crew_color,
@@ -4334,6 +4349,7 @@ def get_assignments_api():
                     'jobName': assign.job.job_name,
                     'jobType': assign.job.job_type,
                     'systemSize': assign.job.system_size or '',
+                    'dayPay': bool(assign.day_pay),
                     'employee': assign.employee.name,
                     'crewName': crew_name,
                     'crewColor': crew_color,
@@ -4578,9 +4594,20 @@ def remove_assignment():
         return jsonify({'success': False, 'message': str(exc)}), 400
 
 
+@app.route('/api/assignment/<int:assign_id>/toggle-day-pay', methods=['POST'])
+def toggle_day_pay(assign_id):
+    if not is_authenticated_session():
+        return jsonify({'ok': False, 'message': 'Unauthorized'}), 403
+    assign = Assignment.query.get(assign_id)
+    if not assign:
+        return jsonify({'ok': False, 'message': 'Assignment not found'}), 404
+    assign.day_pay = not bool(assign.day_pay)
+    db.session.commit()
+    return jsonify({'ok': True, 'day_pay': assign.day_pay})
+
+
 @app.route('/api/return-to-pending', methods=['POST'])
 def return_to_pending():
-    from flask import jsonify
 
     try:
         data = request.json or {}

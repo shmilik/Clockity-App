@@ -3679,6 +3679,7 @@
                                                                         data-story="{{ (item.story or '')|e }}"
                                                                         data-description="{{ (item.description or '')|e }}"
                                                                         data-system-size="{{ (item.system_size or '')|e }}"
+                                                                        data-day-pay="{{ 'true' if item.day_pay else 'false' }}"
                                                                         data-assigned-date="{{ (item.assigned_date or day.key)|e }}"
                                                                         data-start-time="{{ (item.start_time or '')|e }}"
                                                                          data-end-time="{{ (item.end_time or '')|e }}"
@@ -5277,25 +5278,29 @@
                             </thead>
                             <tbody id="payrollFieldBody">
                                 {% for emp in payroll_data.employees if emp.is_field %}
-                                    {% set has_activity = emp.total_service_hours > 0 or emp.total_kw > 0 %}
+                                    {% set has_activity = emp.total_service_hours > 0 or emp.total_kw > 0 or emp.total_day_pay_days > 0 %}
                                     <tr{% if not has_activity %} style="opacity:0.4;"{% endif %}>
                                         <td>{{ emp.name }}</td>
                                         <td class="small">{% if emp.department != '—' %}<span class="text-muted">{{ emp.department }} / </span>{% endif %}<span style="color:{{ emp.group_color }};font-weight:600;">{{ emp.group }}</span></td>
                                         {% for d in payroll_data.days %}
                                             {% set h  = emp.daily_service_hours[d.key] %}
                                             {% set kw = emp.daily_kw[d.key] %}
+                                            {% set dp = emp.daily_day_pay[d.key] %}
                                             <td class="text-center small payroll-day-cell" style="cursor:pointer;" data-emp-id="{{ emp.id }}" data-day="{{ d.key }}" data-emp-name="{{ emp.name }}" title="Click to edit">
-                                                {% if h > 0 or kw > 0 %}
+                                                {% if h > 0 or kw > 0 or dp > 0 %}
                                                     {% if h  > 0 %}<div class="text-info">{{ "%.1f"|format(h) }}h</div>{% endif %}
                                                     {% if kw > 0 %}<div class="text-warning">{{ "%.2f"|format(kw) }}kW</div>{% endif %}
+                                                    {% if dp > 0 %}<div class="text-success fw-semibold" style="font-size:10px;">Day Pay</div>{% endif %}
                                                 {% else %}<span class="text-muted">—</span>{% endif %}
                                             </td>
                                         {% endfor %}
                                         <td class="text-center fw-bold {% if emp.total_service_hours > 0 %}text-info{% else %}text-muted{% endif %}">
                                             {% if emp.total_service_hours > 0 %}{{ "%.1f"|format(emp.total_service_hours) }}h{% else %}—{% endif %}
                                         </td>
-                                        <td class="text-center fw-bold {% if emp.total_kw > 0 %}text-warning{% else %}text-muted{% endif %}">
-                                            {% if emp.total_kw > 0 %}{{ "%.2f"|format(emp.total_kw) }}kW{% else %}—{% endif %}
+                                        <td class="text-center fw-bold">
+                                            {% if emp.total_kw > 0 %}<div class="text-warning">{{ "%.2f"|format(emp.total_kw) }}kW</div>{% endif %}
+                                            {% if emp.total_day_pay_days > 0 %}<div class="text-success" style="font-size:11px;">{{ emp.total_day_pay_days }}×DP</div>{% endif %}
+                                            {% if emp.total_kw == 0 and emp.total_day_pay_days == 0 %}<span class="text-muted">—</span>{% endif %}
                                         </td>
                                     </tr>
                                 {% endfor %}
@@ -7905,6 +7910,7 @@
                     story: chipEl.dataset.story || '',
                     description: chipEl.dataset.description || '',
                     systemSize: chipEl.dataset.systemSize || '',
+                    dayPay: chipEl.dataset.dayPay === 'true',
                     startTime: chipEl.dataset.startTime || '',
                     endTime: chipEl.dataset.endTime || '',
                     assignedDate: chipEl.dataset.assignedDate || '',
@@ -9522,6 +9528,7 @@
                     <strong>Electrician:</strong> ${props.electrician || 'N/A'}<br>
                     <strong>Crew Members:</strong> ${(props.crewMembers || []).join(', ')}<br>
                     <strong>Job Type:</strong> ${props.jobType}${props.systemSize ? ' &nbsp;<strong>System Size:</strong> ' + props.systemSize + ' kW' : ''}<br>
+                    ${props.dayPay ? '<span style="display:inline-block;background:#198754;color:#fff;border-radius:4px;padding:1px 6px;font-size:11px;margin:2px 0;">&#10004; Day Pay</span><br>' : ''}
                     <strong>Status:</strong> ${props.status.replace(/_/g, ' ').toUpperCase()}<br>
                     <strong>PO Number:</strong> ${props.poNumber}<br>
                     <strong>Address:</strong> ${props.address}<br>
@@ -9542,6 +9549,7 @@
                         ? `<button type="button" id="tooltipPublishBtn" class="btn btn-success btn-sm w-100 mt-2 tooltip-action-btn">Publish</button>`
                         : `<button type="button" id="tooltipUnpublishBtn" class="btn btn-secondary btn-sm w-100 mt-2 tooltip-action-btn">Unpublish</button>`}
                     ${props.assignmentId ? `<button type="button" id="tooltipRemoveBtn" class="btn btn-warning btn-sm w-100 mt-2 tooltip-action-btn">Remove from Employee</button>` : ''}
+                    ${props.assignmentId && (props.jobType || '').toLowerCase().includes('install') ? `<button type="button" id="tooltipDayPayBtn" class="btn ${props.dayPay ? 'btn-success' : 'btn-outline-success'} btn-sm w-100 mt-2 tooltip-action-btn">${props.dayPay ? '&#10004; Day Pay (click to remove)' : 'Mark Day Pay'}</button>` : ''}
                     <button type="button" id="tooltipDeleteBtn" class="btn btn-danger btn-sm w-100 mt-2 tooltip-action-btn">Delete</button>
                 </div>
             `;
@@ -9685,6 +9693,22 @@
                     }
 
                     window.location.href = `/job/${props.jobId}/delete`;
+                });
+            }
+
+            const dayPayBtn = document.getElementById('tooltipDayPayBtn');
+            if (dayPayBtn && props.assignmentId) {
+                dayPayBtn.addEventListener('click', function() {
+                    fetch('/api/assignment/' + props.assignmentId + '/toggle-day-pay', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' }
+                    })
+                    .then(function(r) { return r.json(); })
+                    .then(function(data) {
+                        if (data.ok) { reloadPage(); }
+                        else { alert(data.message || 'Failed to toggle Day Pay'); }
+                    })
+                    .catch(function() { alert('Failed to toggle Day Pay'); });
                 });
             }
 
@@ -9938,34 +9962,39 @@
             data.days.forEach(function (d) { thead += '<th class="text-center" style="min-width:72px;">' + d.label + '</th>'; });
             thead += '<th class="text-center" style="min-width:72px;">Total Hrs</th><th class="text-center" style="min-width:72px;">Total kW</th></tr>';
 
-            var tbody = ''; var totalH = 0, totalKw = 0, activeCount = 0, kwOnly = 0;
+            var tbody = ''; var totalH = 0, totalKw = 0, totalDp = 0, activeCount = 0, kwOnly = 0;
             data.employees.filter(function(e){ return e.is_field; }).sort(crewSort).forEach(function (emp) {
-                var active = emp.total_hours > 0 || emp.total_kw > 0;
+                var active = emp.total_hours > 0 || emp.total_kw > 0 || emp.total_day_pay_days > 0;
                 if (active) { if (emp.total_hours > 0) activeCount++; else kwOnly++; }
-                totalH += emp.total_hours; totalKw += emp.total_kw;
+                totalH += emp.total_hours; totalKw += emp.total_kw; totalDp += (emp.total_day_pay_days || 0);
                 tbody += '<tr' + (active ? '' : ' style="opacity:0.4;"') + '>';
                 var deptPart = emp.department !== '\u2014' ? '<span class="text-muted">' + emp.department + ' / </span>' : '';
                 var crewPart = '<span style="color:' + emp.group_color + ';font-weight:600;">' + emp.group + '</span>';
                 tbody += '<td>' + emp.name + '</td><td class="small">' + deptPart + crewPart + '</td>';
                 data.days.forEach(function (d) {
-                    var h = emp.daily_hours[d.key] || 0, kw = emp.daily_kw[d.key] || 0;
+                    var h = emp.daily_hours[d.key] || 0, kw = emp.daily_kw[d.key] || 0, dp = (emp.daily_day_pay || {})[d.key] || 0;
                     var cellAttr = ' class="text-center small payroll-day-cell" style="cursor:pointer;" data-emp-id="' + emp.id + '" data-day="' + d.key + '" data-emp-name="' + emp.name.replace(/"/g,'&quot;') + '" title="Click to edit"';
-                    if (h > 0 || kw > 0) {
+                    if (h > 0 || kw > 0 || dp > 0) {
                         tbody += '<td' + cellAttr + '>';
                         if (h  > 0) tbody += '<div class="text-info">'    + h.toFixed(1)  + 'h</div>';
                         if (kw > 0) tbody += '<div class="text-warning">' + kw.toFixed(2) + 'kW</div>';
+                        if (dp > 0) tbody += '<div class="text-success fw-semibold" style="font-size:10px;">Day Pay</div>';
                         tbody += '</td>';
                     } else { tbody += '<td' + cellAttr + '>\u2014</td>'; }
                 });
+                var kwDpCell = '';
+                if (emp.total_kw > 0) kwDpCell += '<div class="text-warning">' + emp.total_kw.toFixed(2) + 'kW</div>';
+                if (emp.total_day_pay_days > 0) kwDpCell += '<div class="text-success" style="font-size:11px;">' + emp.total_day_pay_days + '\u00d7DP</div>';
+                if (!kwDpCell) kwDpCell = '\u2014';
                 tbody += '<td class="text-center fw-bold ' + (emp.total_hours > 0 ? 'text-info' : 'text-muted') + '">' +
                              (emp.total_hours > 0 ? emp.total_hours.toFixed(1) + 'h' : '\u2014') + '</td>' +
-                         '<td class="text-center fw-bold ' + (emp.total_kw > 0 ? 'text-warning' : 'text-muted') + '">' +
-                             (emp.total_kw > 0 ? emp.total_kw.toFixed(2) + 'kW' : '\u2014') + '</td></tr>';
+                         '<td class="text-center fw-bold">' + kwDpCell + '</td></tr>';
             });
             var summary = 'Active: <strong class="text-white">' + activeCount +
                 (kwOnly > 0 ? ' + ' + kwOnly + ' kW-only' : '') + '</strong>' +
                 '\u00a0\u00a0Week hours: <strong class="text-info">' + totalH.toFixed(1) + 'h</strong>' +
-                '\u00a0\u00a0Week kW: <strong class="text-warning">' + totalKw.toFixed(2) + 'kW</strong>';
+                '\u00a0\u00a0Week kW: <strong class="text-warning">' + totalKw.toFixed(2) + 'kW</strong>' +
+                (totalDp > 0 ? '\u00a0\u00a0Day Pay: <strong class="text-success">' + totalDp + '</strong>' : '');
             return { thead: thead, tbody: tbody, summary: summary };
         }
 
