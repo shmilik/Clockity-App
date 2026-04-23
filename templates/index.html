@@ -6990,7 +6990,6 @@
             const savedScrollY = sessionStorage.getItem('dashActionScrollY');
             if (savedScrollY !== null) {
                 sessionStorage.removeItem('dashActionScrollY');
-                // Restore scroll after the tab transition finishes (~150ms)
                 savedButton.addEventListener('shown.bs.tab', function() {
                     window.scrollTo({ top: parseInt(savedScrollY, 10), behavior: 'instant' });
                 }, { once: true });
@@ -6999,6 +6998,18 @@
             const tab = new bootstrap.Tab(savedButton);
             tab.show();
         }
+
+        // Restore scroll — fallback for when the active tab was already shown (no event fires)
+        window.addEventListener('load', function() {
+            const savedY = sessionStorage.getItem('dashActionScrollY');
+            if (savedY === null) return;
+            sessionStorage.removeItem('dashActionScrollY');
+            requestAnimationFrame(function() {
+                setTimeout(function() {
+                    window.scrollTo({ top: parseInt(savedY, 10), behavior: 'instant' });
+                }, 200);
+            });
+        });
 
         // Use reloadPage() instead of window.location.reload() to preserve scroll position
         function reloadPage() {
