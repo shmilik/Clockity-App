@@ -422,76 +422,76 @@ def ensure_schema_updates():
     inspector = inspect(db.engine)
     schema_updates = {
         'permission_set': {
-            'can_view_payroll': "ALTER TABLE permission_set ADD COLUMN can_view_payroll BOOLEAN DEFAULT 0"
+            'can_view_payroll': "ALTER TABLE permission_set ADD COLUMN IF NOT EXISTS can_view_payroll BOOLEAN DEFAULT FALSE"
         },
         'group': {
-            'color': "ALTER TABLE \"group\" ADD COLUMN color VARCHAR(7) DEFAULT '#667eea'",
-            'permission_set_id': "ALTER TABLE \"group\" ADD COLUMN permission_set_id INTEGER",
-            'city': "ALTER TABLE \"group\" ADD COLUMN city VARCHAR(100)"
+            'color': "ALTER TABLE \"group\" ADD COLUMN IF NOT EXISTS color VARCHAR(7) DEFAULT '#667eea'",
+            'permission_set_id': "ALTER TABLE \"group\" ADD COLUMN IF NOT EXISTS permission_set_id INTEGER",
+            'city': "ALTER TABLE \"group\" ADD COLUMN IF NOT EXISTS city VARCHAR(100)"
         },
         'employee': {
-            'category': "ALTER TABLE employee ADD COLUMN category VARCHAR(50) DEFAULT 'Installer'",
-            'phone_number': "ALTER TABLE employee ADD COLUMN phone_number VARCHAR(20)",
-            'email': "ALTER TABLE employee ADD COLUMN email VARCHAR(255)",
-            'password_hash': "ALTER TABLE employee ADD COLUMN password_hash VARCHAR(255)",
-            'permission_set_id': "ALTER TABLE employee ADD COLUMN permission_set_id INTEGER",
-            'first_login': "ALTER TABLE employee ADD COLUMN first_login BOOLEAN DEFAULT 1"
+            'category': "ALTER TABLE employee ADD COLUMN IF NOT EXISTS category VARCHAR(50) DEFAULT 'Installer'",
+            'phone_number': "ALTER TABLE employee ADD COLUMN IF NOT EXISTS phone_number VARCHAR(50)",
+            'email': "ALTER TABLE employee ADD COLUMN IF NOT EXISTS email VARCHAR(255)",
+            'password_hash': "ALTER TABLE employee ADD COLUMN IF NOT EXISTS password_hash VARCHAR(255)",
+            'permission_set_id': "ALTER TABLE employee ADD COLUMN IF NOT EXISTS permission_set_id INTEGER",
+            'first_login': "ALTER TABLE employee ADD COLUMN IF NOT EXISTS first_login BOOLEAN DEFAULT TRUE"
         },
         'assignment': {
-            'crew_id': "ALTER TABLE assignment ADD COLUMN crew_id INTEGER",
-            'day_pay': "ALTER TABLE assignment ADD COLUMN day_pay BOOLEAN DEFAULT FALSE"
+            'crew_id': "ALTER TABLE assignment ADD COLUMN IF NOT EXISTS crew_id INTEGER",
+            'day_pay': "ALTER TABLE assignment ADD COLUMN IF NOT EXISTS day_pay BOOLEAN DEFAULT FALSE"
         },
         'job': {
-            'created_at': "ALTER TABLE job ADD COLUMN created_at DATETIME",
-            'completed_at': "ALTER TABLE job ADD COLUMN completed_at DATETIME",
-            'po_number': "ALTER TABLE job ADD COLUMN po_number VARCHAR(100)",
-            'address': "ALTER TABLE job ADD COLUMN address VARCHAR(255)",
-            'phone_number': "ALTER TABLE job ADD COLUMN phone_number VARCHAR(20)",
-            'story': "ALTER TABLE job ADD COLUMN story VARCHAR(255)",
-            'description': "ALTER TABLE job ADD COLUMN description VARCHAR(1000)",
-            'system_size': "ALTER TABLE job ADD COLUMN system_size VARCHAR(100)",
-            'cancel_reason': "ALTER TABLE job ADD COLUMN cancel_reason VARCHAR(500)",
-            'pending_date': "ALTER TABLE job ADD COLUMN pending_date DATE",
-            'scheduled_date': "ALTER TABLE job ADD COLUMN scheduled_date DATE",
-            'is_internal': "ALTER TABLE job ADD COLUMN is_internal BOOLEAN DEFAULT 0",
-            'permit_number': "ALTER TABLE job ADD COLUMN permit_number VARCHAR(100)"
+            'created_at': "ALTER TABLE job ADD COLUMN IF NOT EXISTS created_at TIMESTAMP",
+            'completed_at': "ALTER TABLE job ADD COLUMN IF NOT EXISTS completed_at TIMESTAMP",
+            'po_number': "ALTER TABLE job ADD COLUMN IF NOT EXISTS po_number VARCHAR(100)",
+            'address': "ALTER TABLE job ADD COLUMN IF NOT EXISTS address VARCHAR(255)",
+            'phone_number': "ALTER TABLE job ADD COLUMN IF NOT EXISTS phone_number VARCHAR(50)",
+            'story': "ALTER TABLE job ADD COLUMN IF NOT EXISTS story VARCHAR(255)",
+            'description': "ALTER TABLE job ADD COLUMN IF NOT EXISTS description VARCHAR(1000)",
+            'system_size': "ALTER TABLE job ADD COLUMN IF NOT EXISTS system_size VARCHAR(100)",
+            'cancel_reason': "ALTER TABLE job ADD COLUMN IF NOT EXISTS cancel_reason VARCHAR(500)",
+            'pending_date': "ALTER TABLE job ADD COLUMN IF NOT EXISTS pending_date DATE",
+            'scheduled_date': "ALTER TABLE job ADD COLUMN IF NOT EXISTS scheduled_date DATE",
+            'is_internal': "ALTER TABLE job ADD COLUMN IF NOT EXISTS is_internal BOOLEAN DEFAULT FALSE",
+            'permit_number': "ALTER TABLE job ADD COLUMN IF NOT EXISTS permit_number VARCHAR(100)"
         },
         'feedback_report': {
-            'resolved_at': "ALTER TABLE feedback_report ADD COLUMN resolved_at DATETIME",
-            'status': "ALTER TABLE feedback_report ADD COLUMN status VARCHAR(20) DEFAULT 'received'",
-            'opened_at': "ALTER TABLE feedback_report ADD COLUMN opened_at DATETIME",
-            'opened_by': "ALTER TABLE feedback_report ADD COLUMN opened_by VARCHAR(255)",
-            'closed_at': "ALTER TABLE feedback_report ADD COLUMN closed_at DATETIME",
-            'closed_by': "ALTER TABLE feedback_report ADD COLUMN closed_by VARCHAR(255)",
-            'reply': "ALTER TABLE feedback_report ADD COLUMN reply TEXT",
-            'reply_seen': "ALTER TABLE feedback_report ADD COLUMN reply_seen BOOLEAN DEFAULT 0"
+            'resolved_at': "ALTER TABLE feedback_report ADD COLUMN IF NOT EXISTS resolved_at TIMESTAMP",
+            'status': "ALTER TABLE feedback_report ADD COLUMN IF NOT EXISTS status VARCHAR(20) DEFAULT 'received'",
+            'opened_at': "ALTER TABLE feedback_report ADD COLUMN IF NOT EXISTS opened_at TIMESTAMP",
+            'opened_by': "ALTER TABLE feedback_report ADD COLUMN IF NOT EXISTS opened_by VARCHAR(255)",
+            'closed_at': "ALTER TABLE feedback_report ADD COLUMN IF NOT EXISTS closed_at TIMESTAMP",
+            'closed_by': "ALTER TABLE feedback_report ADD COLUMN IF NOT EXISTS closed_by VARCHAR(255)",
+            'reply': "ALTER TABLE feedback_report ADD COLUMN IF NOT EXISTS reply TEXT",
+            'reply_seen': "ALTER TABLE feedback_report ADD COLUMN IF NOT EXISTS reply_seen BOOLEAN DEFAULT FALSE"
         },
         'timesheet': {
-            'employee_name_snapshot': "ALTER TABLE timesheet ADD COLUMN employee_name_snapshot VARCHAR(100)",
-            'employee_email_snapshot': "ALTER TABLE timesheet ADD COLUMN employee_email_snapshot VARCHAR(255)",
-            'employee_phone_snapshot': "ALTER TABLE timesheet ADD COLUMN employee_phone_snapshot VARCHAR(20)"
+            'employee_name_snapshot': "ALTER TABLE timesheet ADD COLUMN IF NOT EXISTS employee_name_snapshot VARCHAR(100)",
+            'employee_email_snapshot': "ALTER TABLE timesheet ADD COLUMN IF NOT EXISTS employee_email_snapshot VARCHAR(255)",
+            'employee_phone_snapshot': "ALTER TABLE timesheet ADD COLUMN IF NOT EXISTS employee_phone_snapshot VARCHAR(20)"
         },
         'job_deletion_log': {
-            'po_number': "ALTER TABLE job_deletion_log ADD COLUMN po_number VARCHAR(100)",
-            'address': "ALTER TABLE job_deletion_log ADD COLUMN address VARCHAR(255)",
-            'phone_number': "ALTER TABLE job_deletion_log ADD COLUMN phone_number VARCHAR(20)",
-            'story': "ALTER TABLE job_deletion_log ADD COLUMN story VARCHAR(255)",
-            'description': "ALTER TABLE job_deletion_log ADD COLUMN description VARCHAR(1000)",
-            'system_size': "ALTER TABLE job_deletion_log ADD COLUMN system_size VARCHAR(100)",
-            'restored': "ALTER TABLE job_deletion_log ADD COLUMN restored BOOLEAN DEFAULT 0",
-            'restored_at': "ALTER TABLE job_deletion_log ADD COLUMN restored_at DATETIME",
-            'restored_job_id': "ALTER TABLE job_deletion_log ADD COLUMN restored_job_id INTEGER"
+            'po_number': "ALTER TABLE job_deletion_log ADD COLUMN IF NOT EXISTS po_number VARCHAR(100)",
+            'address': "ALTER TABLE job_deletion_log ADD COLUMN IF NOT EXISTS address VARCHAR(255)",
+            'phone_number': "ALTER TABLE job_deletion_log ADD COLUMN IF NOT EXISTS phone_number VARCHAR(20)",
+            'story': "ALTER TABLE job_deletion_log ADD COLUMN IF NOT EXISTS story VARCHAR(255)",
+            'description': "ALTER TABLE job_deletion_log ADD COLUMN IF NOT EXISTS description VARCHAR(1000)",
+            'system_size': "ALTER TABLE job_deletion_log ADD COLUMN IF NOT EXISTS system_size VARCHAR(100)",
+            'restored': "ALTER TABLE job_deletion_log ADD COLUMN IF NOT EXISTS restored BOOLEAN DEFAULT FALSE",
+            'restored_at': "ALTER TABLE job_deletion_log ADD COLUMN IF NOT EXISTS restored_at TIMESTAMP",
+            'restored_job_id': "ALTER TABLE job_deletion_log ADD COLUMN IF NOT EXISTS restored_job_id INTEGER"
         },
         'invite_code': {
-            'expires_at': "ALTER TABLE invite_code ADD COLUMN expires_at DATETIME"
+            'expires_at': "ALTER TABLE invite_code ADD COLUMN IF NOT EXISTS expires_at TIMESTAMP"
         },
         'time_off_request': {
-            'request_type': "ALTER TABLE time_off_request ADD COLUMN request_type VARCHAR(50) DEFAULT 'Vacation'",
-            'reason': "ALTER TABLE time_off_request ADD COLUMN reason VARCHAR(500)",
-            'reviewed_by': "ALTER TABLE time_off_request ADD COLUMN reviewed_by VARCHAR(100)",
-            'reviewed_at': "ALTER TABLE time_off_request ADD COLUMN reviewed_at DATETIME",
-            'response_note': "ALTER TABLE time_off_request ADD COLUMN response_note VARCHAR(500)",
-            'seen_by_employee': "ALTER TABLE time_off_request ADD COLUMN seen_by_employee BOOLEAN DEFAULT 1"
+            'request_type': "ALTER TABLE time_off_request ADD COLUMN IF NOT EXISTS request_type VARCHAR(50) DEFAULT 'Vacation'",
+            'reason': "ALTER TABLE time_off_request ADD COLUMN IF NOT EXISTS reason VARCHAR(500)",
+            'reviewed_by': "ALTER TABLE time_off_request ADD COLUMN IF NOT EXISTS reviewed_by VARCHAR(100)",
+            'reviewed_at': "ALTER TABLE time_off_request ADD COLUMN IF NOT EXISTS reviewed_at TIMESTAMP",
+            'response_note': "ALTER TABLE time_off_request ADD COLUMN IF NOT EXISTS response_note VARCHAR(500)",
+            'seen_by_employee': "ALTER TABLE time_off_request ADD COLUMN IF NOT EXISTS seen_by_employee BOOLEAN DEFAULT TRUE"
         }
     }
 
@@ -500,10 +500,8 @@ def ensure_schema_updates():
             if table_name not in inspector.get_table_names():
                 continue
 
-            existing_columns = {column['name'] for column in inspector.get_columns(table_name)}
             for column_name, alter_sql in columns.items():
-                if column_name not in existing_columns:
-                    connection.execute(text(alter_sql))
+                connection.execute(text(alter_sql))
 
         connection.execute(text("UPDATE \"group\" SET color = '#667eea' WHERE color IS NULL OR color = ''"))
         connection.execute(text("UPDATE employee SET category = 'Installer' WHERE category IS NULL OR category = ''"))
