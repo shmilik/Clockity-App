@@ -6987,18 +6987,18 @@
                 localStorage.setItem(storageKey, savedTarget);
             }
 
+            const savedScrollY = sessionStorage.getItem('dashActionScrollY');
+            if (savedScrollY !== null) {
+                sessionStorage.removeItem('dashActionScrollY');
+                // Restore scroll after the tab transition finishes (~150ms)
+                savedButton.addEventListener('shown.bs.tab', function() {
+                    window.scrollTo({ top: parseInt(savedScrollY, 10), behavior: 'instant' });
+                }, { once: true });
+            }
+
             const tab = new bootstrap.Tab(savedButton);
             tab.show();
         }
-
-        // Restore scroll position after any in-page action reload
-        (function() {
-            const savedY = sessionStorage.getItem('dashActionScrollY');
-            if (savedY !== null) {
-                sessionStorage.removeItem('dashActionScrollY');
-                window.scrollTo(0, parseInt(savedY, 10));
-            }
-        })();
 
         // Use reloadPage() instead of window.location.reload() to preserve scroll position
         function reloadPage() {
