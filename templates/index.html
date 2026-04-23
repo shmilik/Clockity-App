@@ -6960,6 +6960,10 @@
             if (v !== null) {
                 sessionStorage.removeItem('dashActionScrollY');
                 _scrollRestoreY = parseInt(v, 10);
+                // Hide page immediately to prevent flash-to-top before scroll is restored
+                document.documentElement.style.visibility = 'hidden';
+                // Safety: always reveal after 1.5s even if scroll restore path never fires
+                setTimeout(function() { document.documentElement.style.visibility = ''; }, 1500);
             }
         })();
 
@@ -7000,15 +7004,19 @@
 
             if (_scrollRestoreY !== null) {
                 var _targetY = _scrollRestoreY;
+                function _doScrollRestore() {
+                    window.scrollTo({ top: _targetY, behavior: 'instant' });
+                    document.documentElement.style.visibility = '';
+                }
                 if (savedButton.classList.contains('active')) {
                     // Tab is already active in HTML (server-rendered); Bootstrap's tab.show()
                     // returns early without firing shown.bs.tab. Scroll after setup finishes
                     // (including calendar.render() which runs after this function).
-                    setTimeout(function() { window.scrollTo({ top: _targetY, behavior: 'instant' }); }, 150);
+                    setTimeout(_doScrollRestore, 150);
                     setTimeout(function() { window.scrollTo({ top: _targetY, behavior: 'instant' }); }, 600);
                 } else {
                     savedButton.addEventListener('shown.bs.tab', function() {
-                        window.scrollTo({ top: _targetY, behavior: 'instant' });
+                        _doScrollRestore();
                         setTimeout(function() { window.scrollTo({ top: _targetY, behavior: 'instant' }); }, 300);
                     }, { once: true });
                 }
@@ -7023,7 +7031,10 @@
         window.addEventListener('load', function() {
             if (_scrollRestoreY === null) return;
             var _y = _scrollRestoreY;
-            setTimeout(function() { window.scrollTo({ top: _y, behavior: 'instant' }); }, 200);
+            setTimeout(function() {
+                window.scrollTo({ top: _y, behavior: 'instant' });
+                document.documentElement.style.visibility = '';
+            }, 200);
         });
 
         // Use reloadPage() instead of window.location.reload() to preserve scroll position
