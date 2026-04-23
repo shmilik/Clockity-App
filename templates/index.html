@@ -7215,19 +7215,32 @@
             const jobTypeSelect = document.getElementById('quickJobType');
             const systemSizeInput = document.getElementById('quickSystemSize');
             const storyInput = document.getElementById('quickStory');
-            if (!jobTypeSelect || !systemSizeInput || !storyInput) return;
+            const form = document.getElementById('quickAddJobForm');
+            if (!jobTypeSelect || !systemSizeInput || !storyInput || !form) return;
+
+            // Job types that are emergency / service calls — PO and phone may not be on hand
+            const SERVICE_TYPES = ['Red Tag', 'Service', 'Roof Leak', 'Reinstall', 'Uninstall',
+                'Emergency Funding', 'Solar Install', 'MPU', 'Funding', 'Custom Shift'];
+            const STORY_OPTIONAL = SERVICE_TYPES; // same set
 
             function applyRequiredState() {
-                const needsSystemSize = jobTypeSelect.value === 'Install';
-                const storyOptionalTypes = ['MPU', 'Funding'];
-                const needsStory = !storyOptionalTypes.includes(jobTypeSelect.value);
-                systemSizeInput.required = needsSystemSize;
-                storyInput.required = needsStory;
-                if (!needsSystemSize) {
-                    systemSizeInput.value = '';
-                }
+                const val = jobTypeSelect.value;
+                const isInstall = val === 'Install';
+                const isStandardRequired = ['Install', 'Inspection', 'Site Survey'].includes(val);
+
+                systemSizeInput.required = isInstall;
+                if (!isInstall) systemSizeInput.value = '';
+
+                storyInput.required = !STORY_OPTIONAL.includes(val);
+
+                const poInput = form.querySelector('[name="po_number"]');
+                const phoneInput = form.querySelector('[name="phone_number"]');
+                if (poInput)   poInput.required   = isStandardRequired;
+                if (phoneInput) phoneInput.required = isStandardRequired;
             }
 
+            jobTypeSelect.removeEventListener('change', jobTypeSelect._quickHandler);
+            jobTypeSelect._quickHandler = applyRequiredState;
             jobTypeSelect.addEventListener('change', applyRequiredState);
             applyRequiredState();
         }
@@ -8673,16 +8686,27 @@
             const permitInput = document.getElementById('calSlotPermitNumber');
             if (!jobTypeSelect) return;
 
+            // Job types where PO and phone may not be available at time of entry
+            const SERVICE_TYPES = ['Red Tag', 'Service', 'Roof Leak', 'Reinstall', 'Uninstall',
+                'Emergency Funding', 'Solar Install', 'MPU', 'Funding', 'Custom Shift'];
+
             function applyState() {
                 const val = jobTypeSelect.value;
-                const needsSize = val === 'Install';
-                const storyOptional = ['MPU', 'Funding'].includes(val);
+                const isInstall = val === 'Install';
                 const isInspection = val === 'Inspection';
+                const isStandardRequired = ['Install', 'Inspection', 'Site Survey'].includes(val);
+
                 if (systemSizeInput) {
-                    systemSizeInput.required = needsSize;
-                    if (!needsSize) systemSizeInput.value = '';
+                    systemSizeInput.required = isInstall;
+                    if (!isInstall) systemSizeInput.value = '';
                 }
-                if (storyInput) storyInput.required = !storyOptional;
+                if (storyInput) storyInput.required = !SERVICE_TYPES.includes(val);
+
+                const poInput = document.getElementById('calSlotPoNumber');
+                const phoneInput = document.getElementById('calSlotPhone');
+                if (poInput)    poInput.required    = isStandardRequired;
+                if (phoneInput) phoneInput.required = isStandardRequired;
+
                 if (permitField) {
                     permitField.style.display = isInspection ? 'block' : 'none';
                     if (permitInput) permitInput.required = isInspection;
