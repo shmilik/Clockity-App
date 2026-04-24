@@ -1077,7 +1077,7 @@ def _build_payroll_data(week_start):
             'daily_service_hours': {d['key']: 0.0 for d in days},
             'daily_adj_hours': {d['key']: 0.0 for d in days},
             'daily_adj_kw':    {d['key']: 0.0 for d in days},
-            'earns_kw':   any((r or '').strip().lower() in ('electrician', 'installer')
+            'earns_kw':   any((r or '').strip().lower() in ('electrician', 'installer', 'crew lead')
                              for r in (emp.category or '').split(',')),
             'total_hours': 0.0,
             'total_service_hours': 0.0,
