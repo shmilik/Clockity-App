@@ -1077,6 +1077,8 @@ def _build_payroll_data(week_start):
             'daily_service_hours': {d['key']: 0.0 for d in days},
             'daily_adj_hours': {d['key']: 0.0 for d in days},
             'daily_adj_kw':    {d['key']: 0.0 for d in days},
+            'earns_kw':   any((r or '').strip().lower() in ('electrician', 'installer')
+                             for r in (emp.category or '').split(',')),
             'total_hours': 0.0,
             'total_service_hours': 0.0,
             'total_kw':    0.0,
@@ -1101,16 +1103,20 @@ def _build_payroll_data(week_start):
             bucket['daily_service_hours'][day_key] = round(bucket['daily_service_hours'][day_key] + h, 2)
             bucket['total_service_hours']          = round(bucket['total_service_hours'] + h, 2)
 
+    _KW_JOB_TYPES = {'install', 'solar install', 'reinstall'}
     seen_kw = set()
     seen_day_pay = set()
     for assign in week_assigns:
         if not assign.job or not assign.assigned_date:
             continue
-        if 'install' not in (assign.job.job_type or '').strip().lower():
+        jt = (assign.job.job_type or '').strip().lower()
+        if jt not in _KW_JOB_TYPES:
             continue
         day_key = assign.assigned_date.isoformat()
         bucket = emp_map.get(assign.employee_id)
         if not bucket:
+            continue
+        if not bucket['earns_kw']:
             continue
         po = (assign.job.po_number or '').strip()
         job_key = po if po else str(assign.job.id)
